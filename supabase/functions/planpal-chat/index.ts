@@ -70,7 +70,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const { data: membership, error: membershipError } = await supabase
-      .from("group_members")
+      .from("users_groups")
       .select("*")
       .eq("group_id", groupId)
       .eq("user_id", user.id)
@@ -92,43 +92,52 @@ Deno.serve(async (req: Request) => {
       .eq("id", groupId)
       .maybeSingle();
 
-    const { data: upcomingOutings } = await supabase
-      .from("outings")
-      .select("title, description, location, scheduled_at, status")
+    const { data: upcomingEvents } = await supabase
+      .from("events")
+      .select("title, description, location_name, event_date, status")
       .eq("group_id", groupId)
-      .order("scheduled_at", { ascending: true })
+      .order("event_date", { ascending: true })
       .limit(5);
 
-    const { data: activePolls } = await supabase
-      .from("polls")
-      .select(`
-        id,
-        title,
-        description,
-        status,
-        poll_options (
+    const { data: eventIds } = await supabase
+      .from("events")
+      .select("id")
+      .eq("group_id", groupId);
+
+    let activePolls = null;
+    if (eventIds && eventIds.length > 0) {
+      const { data } = await supabase
+        .from("polls")
+        .select(`
           id,
-          option_text
-        )
-      `)
-      .eq("group_id", groupId)
-      .eq("status", "active")
-      .limit(3);
+          title,
+          description,
+          status,
+          poll_options (
+            id,
+            name
+          )
+        `)
+        .in("event_id", eventIds.map(e => e.id))
+        .eq("status", "active")
+        .limit(3);
+      activePolls = data;
+    }
 
     const genAI = new GoogleGenerativeAI(geminiApiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-    const systemContext = `You are PlanPal, a friendly AI assistant helping coordinate group activities and outings. 
+    const systemContext = `You are PlanPal, a friendly AI assistant helping coordinate group activities and outings.
 You are currently assisting the group: ${groupData?.name || "Unknown Group"}.
 ${groupData?.description ? `Group Description: ${groupData.description}` : ""}
 
 Current group information:
-- Upcoming outings: ${upcomingOutings?.length ? JSON.stringify(upcomingOutings) : "None scheduled"}
+- Upcoming events: ${upcomingEvents?.length ? JSON.stringify(upcomingEvents) : "None scheduled"}
 - Active polls: ${activePolls?.length ? JSON.stringify(activePolls) : "No active polls"}
 
 Your role is to:
 1. Help coordinate plans and suggest activities
-2. Answer questions about upcoming outings
+2. Answer questions about upcoming events
 3. Provide information about active polls
 4. Suggest ideas for group activities based on context
 5. Be friendly, helpful, and concise
