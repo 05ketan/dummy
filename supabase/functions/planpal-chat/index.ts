@@ -1,6 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { GoogleGenerativeAI } from "@google/generative-ai";
-import { createClient } from "@supabase/supabase-js";
+import { GoogleGenerativeAI } from "npm:@google/generative-ai@0.24.1";
+import { createClient } from "npm:@supabase/supabase-js@2.58.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
