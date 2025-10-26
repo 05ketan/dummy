@@ -45,8 +45,3 @@ pnpm-lock.yaml
 SETUP.md
 migrations/
 .vercel
-database-setup.sql
-DEPLOYMENT_GUIDE.md
-DEPLOYMENT_OVERVIEW.md
-QUICK_START.md
-SUPABASE_EDGE_FUNCTION_DEPLOYMENT_GUIDE.md
