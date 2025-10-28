@@ -1,9 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import Link from 'next/link'
-import { Users, Plus } from 'lucide-react'
+import { CreateGroupDialog } from '@/components/groups/CreateGroupDialog'
+import { GroupCard } from '@/components/groups/GroupCard'
+import { LogOut } from 'lucide-react'
 
 export default async function GroupsPage() {
   const supabase = await createClient()
@@ -13,6 +14,30 @@ export default async function GroupsPage() {
   } = await supabase.auth.getUser()
 
   if (!user) {
+    redirect('/login')
+  }
+
+  const { data: groups } = await supabase
+    .from('groups')
+    .select(`
+      id,
+      name,
+      description,
+      group_members (count)
+    `)
+    .order('created_at', { ascending: false })
+
+  const groupsWithCount = groups?.map(group => ({
+    id: group.id,
+    name: group.name,
+    description: group.description,
+    member_count: Array.isArray(group.group_members) ? group.group_members.length : 0,
+  })) || []
+
+  async function signOut() {
+    'use server'
+    const supabase = await createClient()
+    await supabase.auth.signOut()
     redirect('/login')
   }
 
@@ -28,36 +53,28 @@ export default async function GroupsPage() {
             <Link href="/profile">
               <Button variant="outline">Profile</Button>
             </Link>
-            <Button>
-              <Plus className="w-4 h-4 mr-2" />
-              New Group
-            </Button>
+            <CreateGroupDialog />
+            <form action={signOut}>
+              <Button variant="ghost" type="submit">
+                <LogOut className="w-4 h-4 mr-2" />
+                Sign Out
+              </Button>
+            </form>
           </div>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <Users className="w-8 h-8 text-blue-600" />
-                <span className="text-sm text-slate-500">5 members</span>
-              </div>
-              <CardTitle className="mt-4">Weekend Warriors</CardTitle>
-              <CardDescription>Friends who love adventure</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-slate-600">Last active: 2 days ago</p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-2 border-dashed border-slate-300 hover:border-slate-400 transition-colors cursor-pointer flex items-center justify-center min-h-[200px]">
-            <div className="text-center p-6">
-              <Plus className="w-12 h-12 mx-auto text-slate-400 mb-2" />
-              <p className="text-slate-600 font-medium">Create a new group</p>
-              <p className="text-sm text-slate-500 mt-1">Start planning with friends</p>
-            </div>
-          </Card>
-        </div>
+        {groupsWithCount.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-slate-600 mb-4">You haven't joined any groups yet</p>
+            <CreateGroupDialog />
+          </div>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {groupsWithCount.map((group) => (
+              <GroupCard key={group.id} group={group} />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )
