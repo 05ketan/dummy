@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
+import { ProfileForm } from '@/components/profile/ProfileForm'
 
 export default async function ProfilePage() {
   const supabase = await createClient()
@@ -17,6 +18,12 @@ export default async function ProfilePage() {
   if (!user) {
     redirect('/login')
   }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', user.id)
+    .maybeSingle()
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
@@ -42,38 +49,7 @@ export default async function ProfilePage() {
                 <Input type="email" value={user.email} disabled />
               </div>
 
-              <div className="space-y-2">
-                <Label>Home Location</Label>
-                <p className="text-sm text-slate-600 mb-2">
-                  Your default location for calculating meeting points
-                </p>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="lat">Latitude</Label>
-                    <Input id="lat" type="number" step="any" placeholder="40.7128" />
-                  </div>
-                  <div>
-                    <Label htmlFor="lon">Longitude</Label>
-                    <Input id="lon" type="number" step="any" placeholder="-74.0060" />
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Default Preferences</Label>
-                <p className="text-sm text-slate-600 mb-2">
-                  Set your typical mood preferences
-                </p>
-                <div className="flex gap-2 flex-wrap">
-                  <Button variant="outline" size="sm">Chill</Button>
-                  <Button variant="outline" size="sm">Foodie</Button>
-                  <Button variant="outline" size="sm">Adventurous</Button>
-                </div>
-              </div>
-
-              <div className="pt-4 border-t">
-                <Button>Save Changes</Button>
-              </div>
+              <ProfileForm profile={profile} />
             </CardContent>
           </Card>
         </div>
